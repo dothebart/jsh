@@ -43,16 +43,24 @@ def GetParamsFromArgv(offset, jobName):
         params[kv[0]] = kv[1]
         where += 1
     return params
-        
-def JenkinsFromConfig(serverName):
+
+def getServerConfig():
     retServer = None
     defServerName = ""
+    for nArg in range(0, len(sys.argv)-1):
+        if sys.argv[nArg] == '--server':
+            defServerName = sys.argv[nArg + 1]
+    
     for server in config['server']:
         if server['default'] == True:
             retServer = server        
         if server['name'] == serverName: 
             retServer = server
             break
+    return retServer
+
+def JenkinsFromConfig(serverName):
+    retServer = getServerConfig()
     if (retServer == None):
         print("no server by name '%s' found!" % serverName)
         raise
@@ -100,8 +108,6 @@ def pollJob(url, fdout):
                     data = {'foo': 'bar'}
                 )
 
-                
-            
         moreData = rc.headers.get('X-More-Data')
         moreData = (moreData != None) and (moreData == 'true')
 
@@ -132,7 +138,12 @@ def getCompleteState():
         print("COMPREPLY=(run get scan)")
         return
 
-    ServerName = 'myServerName' # TODO
+    serverCfg = getServerConfig()
+    if serverCfg == None:
+        print("unable to detect server to autocomplete against, define default or specify one.")
+        return
+    
+    ServerName = serverCfg['name']
     cacheFile = open(os.environ['HOME'] + '/.jsh/' + ServerName + '.json', 'r')
     jobs = json.load(cacheFile)
     command = sys.argv[5]
@@ -179,9 +190,6 @@ def getCompleteState():
                     
                     paramDocu += "%s: (%s No auto suggestions) %s\n" % (paramName, param['type'], param['description'])
 
-            if copleteType == 63:
-                print(paramDocu, file=sys.stderr)
-
             matchingParams=[]
             if len(orgArgv) + 1 < completeIndex:
                 matchingParams = paramHints
@@ -191,6 +199,9 @@ def getCompleteState():
                     if hint.startswith(matchStr): 
                         matchingParams.append(hint)
             
+            if copleteType == 63 and len(matchingParams) > 1:
+                print(paramDocu, file=sys.stderr)
+
             completionString = (connectString.join('"' + hint.translate(escapeBlanks)  + '"' for hint in matchingParams))
             
             print("COMPREPLY=(" + completionString + ')')
