@@ -64,7 +64,16 @@ def JenkinsFromConfig(serverName):
     if (retServer == None):
         print("no server by name '%s' found!" % serverName)
         raise
-    return (retServer['name'], Jenkins(retServer['url'], username=retServer['user'], password=retServer['password']))
+    return (retServer['name'],
+            Jenkins(retServer['url'],
+                    username=retServer['user'],
+                    password=retServer['password'],
+                    requester=CrumbRequester(baseurl=retServer['url'],
+                                             username=retServer['user'],
+                                            password=retServer['password']
+                                             )
+                    )
+            )
 
 proceedRX = re.compile(".*'([/a-zA-Z0-9]*proceedEmpty).*'([/a-zA-Z0-9]*abort).*")
 
